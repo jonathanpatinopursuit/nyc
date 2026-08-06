@@ -69,17 +69,15 @@
   }
   .live-badge {
     display: inline-block;
-    vertical-align: middle;
-    font-size: 0.36em;
+    font-size: clamp(14px, 2vw, 18px);
     font-weight: 800;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #ffffff;
     background: var(--danger);
-    padding: 4px 9px;
-    border-radius: 4px;
-    margin-right: 12px;
-    transform: translateY(-3px);
+    padding: 8px 18px;
+    border-radius: 999px;
+    margin: 0 0 20px;
   }
 
   /* Slide deck: one section per beat, shown/hidden via JS, advanced with the keyboard. */
@@ -119,12 +117,12 @@
      white headline stays legible. */
   .slide-hero {
     display: none;
-    align-items: flex-end;
+    align-items: center;
     min-height: 100vh;
     min-height: 100dvh;
     width: 100%;
     overflow: hidden;
-    background-image: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.15) 100%), url('/rat.jpg');
+    background-image: radial-gradient(ellipse at center, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.58) 42%, rgba(0,0,0,0.38) 68%, rgba(0,0,0,0.3) 100%), url('/rat.jpg');
     background-size: cover;
     background-position: center 30%;
   }
@@ -134,7 +132,8 @@
     width: 100%;
     max-width: 720px;
     margin: 0 auto;
-    padding: 40px 20px 72px;
+    padding: 40px 20px;
+    text-align: center;
   }
   .slide-hero h1 {
     color: #ffffff;
@@ -146,7 +145,7 @@
     line-height: 1.5;
     color: rgba(255,255,255,0.92);
     max-width: 58ch;
-    margin: 0;
+    margin: 0 auto;
   }
   .hero-hint {
     margin: 32px 0 0;
@@ -537,7 +536,8 @@
 
 <section class="slide slide-hero active" data-slide>
   <div class="hero-inner">
-    <h1><span class="live-badge">Live</span>NYC's Rat Problem</h1>
+    <span class="live-badge">Live</span>
+    <h1>NYC's Rat Problem</h1>
     <p class="hero-tagline">There's a place in New York City where landlords get cited for rats and mice at more than five times the rate of the least-affected borough.</p>
     <p class="hero-hint">Press &rarr; or Space to continue</p>
   </div>
