@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rat problem NYC</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --series-accent:  #2a78d6;
+    --series-muted:   #b7d3f6;
+    --border:         rgba(11,11,11,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --series-accent:  #3987e5;
+      --series-muted:   #184f95;
+      --border:         rgba(255,255,255,0.10);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 56px 20px 96px;
+  }
+  .kicker {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.15;
+    margin: 0 0 28px;
+    letter-spacing: -0.01em;
+  }
+  .story p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin: 0 0 20px;
+  }
+  .story p.finding {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .story p.sowhat {
+    padding: 16px 18px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .sowhat-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--series-accent);
+    margin-bottom: 6px;
+  }
+
+  .chart-card {
+    margin: 40px 0 8px;
+    padding: 24px 24px 12px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .chart-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 2px;
+  }
+  .chart-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 20px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .bar-label {
+    width: 108px;
+    flex: 0 0 auto;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: right;
+  }
+  .bar-row.lead .bar-label {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .bar-track {
+    position: relative;
+    flex: 1 1 auto;
+    height: 24px;
+    background: transparent;
+  }
+  .bar-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 24px;
+    border-radius: 4px;
+    background: var(--series-muted);
+    transition: width 0.6s ease;
+    width: 0;
+  }
+  .bar-row.lead .bar-fill {
+    background: var(--series-accent);
+  }
+  .bar-value {
+    position: absolute;
+    top: 0;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    padding-left: 8px;
+    white-space: nowrap;
+  }
+  .bar-row.lead .bar-value { font-weight: 700; }
+
+  .chart-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--gridline);
+  }
+
+  .map-wrap {
+    position: relative;
+  }
+  #boro-map {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .boro-path {
+    stroke: var(--surface-1);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    cursor: pointer;
+  }
+  .boro-path:hover,
+  .boro-path:focus-visible {
+    filter: brightness(1.1);
+  }
+  .boro-path:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: -2px;
+  }
+  .boro-abbr {
+    font-size: 15px;
+    font-weight: 700;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  .boro-value {
+    font-size: 12px;
+    font-weight: 600;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  .map-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--text-primary);
+    color: var(--surface-1);
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    border-radius: 6px;
+    transform: translate(-50%, -100%);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    z-index: 2;
+  }
+  .map-tooltip.visible { opacity: 1; }
+  .map-tooltip .tt-value {
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .map-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    max-width: 260px;
+  }
+  .map-legend .legend-bar {
+    flex: 1 1 auto;
+    height: 8px;
+    border-radius: 4px;
+  }
+  .map-legend span {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .map-legend-caption {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 8px 0 0;
+  }
+
+  .table-toggle {
+    background: none;
+    border: none;
+    color: var(--series-accent);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    margin: 12px 0 20px;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 0 0 24px;
+    display: none;
+  }
+  table.data-table.visible { display: table; }
+  table.data-table th, table.data-table td {
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table th:first-child, table.data-table td:first-child {
+    text-align: left;
+    font-variant-numeric: normal;
+  }
+  table.data-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .status {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 8px 0 0;
+  }
+  .status.error { color: #d03b3b; }
+
+  footer {
+    margin-top: 32px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">New York City &middot; Housing Data</p>
+  <h1>Rat problem NYC</h1>
+
+  <div class="chart-card map-card">
+    <p class="chart-title">Rodent-related HPD violations per 100,000 residents</p>
+    <p class="chart-subtitle">By borough, violations issued Jan 2020&ndash;present</p>
+    <div class="map-wrap">
+      <svg id="boro-map" viewBox="0 0 600 600" role="img" aria-label="Choropleth map of New York City's five boroughs, shaded by rodent-related housing violations per 100,000 residents"></svg>
+      <div class="map-tooltip" id="map-tooltip"></div>
+    </div>
+    <div class="map-legend" id="map-legend"></div>
+    <p class="map-legend-caption">Darker = more rodent-related violations per 100,000 residents. Hover or tab through a borough for exact figures.</p>
+    <p class="chart-note">Source: NYC Open Data &mdash; HPD Housing Maintenance Code Violations (dataset csn4-vhvf) and Borough Boundaries (dataset gthc-hcne).</p>
+  </div>
+
+  <div class="story">
+    <p>There's a place in New York City where landlords get cited for rats and mice at more than five times the rate of the least-affected borough.</p>
+
+    <p>This comes from NYC Open Data's HPD Housing Maintenance Code Violations dataset, covering every violation issued citywide from January 2020 through today, across all five boroughs.</p>
+
+    <p>I counted every violation citing rodents, rats, or mice for each borough, then divided by that borough's 2020 Census population to get a fair rate per 100,000 residents.</p>
+
+    <p class="finding" id="finding-text">Loading the finding from live data&hellip;</p>
+
+    <p class="sowhat">
+      <span class="sowhat-label">So what</span>
+      HPD should add the Bronx's five highest-violation ZIP codes &mdash; 10456, 10457, 10458, 10467, and 10453 &mdash; to its proactive inspection list before the fall rodent season starts on September 1, 2026, instead of waiting for resident complaints to trigger action.
+    </p>
+  </div>
+
+  <div class="chart-card">
+    <p class="chart-title">The comparison, borough by borough</p>
+    <p class="chart-subtitle">Same data as the map above, ranked</p>
+    <div id="chart"></div>
+    <p class="chart-note">Source: NYC Open Data, HPD Housing Maintenance Code Violations (dataset csn4-vhvf). Rate = violations mentioning "rodent," "rats," or "mice," divided by 2020 Census borough population, &times; 100,000.</p>
+  </div>
+
+  <button class="table-toggle" id="table-toggle" type="button">Show data table</button>
+  <table class="data-table" id="data-table">
+    <thead>
+      <tr><th>Borough</th><th>Violations</th><th>Population</th><th>Per 100k</th></tr>
+    </thead>
+    <tbody id="data-table-body"></tbody>
+  </table>
+
+  <p class="status" id="status">Fetching live data from NYC Open Data&hellip;</p>
+
+  <footer>Data refreshes on every page load via a live query to NYC Open Data (Socrata). Population figures are 2020 U.S. Census borough totals.</footer>
+</main>
+
+<script>
+  function boroLabel(boro) {
+    return boro.split(' ').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
+  }
+
+  function renderChart(rows) {
+    const chart = document.getElementById('chart');
+    const max = Math.max(...rows.map(r => r.pest_per_100k));
+    chart.innerHTML = '';
+
+    rows.forEach((row, i) => {
+      const pct = (row.pest_per_100k / max) * 100;
+      const wrap = document.createElement('div');
+      wrap.className = 'bar-row' + (i === 0 ? ' lead' : '');
+
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = boroLabel(row.boro);
+
+      const track = document.createElement('div');
+      track.className = 'bar-track';
+
+      const fill = document.createElement('div');
+      fill.className = 'bar-fill';
+
+      const value = document.createElement('div');
+      value.className = 'bar-value';
+      value.textContent = row.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+      track.appendChild(fill);
+      track.appendChild(value);
+      wrap.appendChild(label);
+      wrap.appendChild(track);
+      chart.appendChild(wrap);
+
+      requestAnimationFrame(() => {
+        fill.style.width = pct + '%';
+        value.style.left = 'calc(' + pct + '% + 8px)';
+      });
+    });
+  }
+
+  function renderTable(rows) {
+    const body = document.getElementById('data-table-body');
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td>${boroLabel(r.boro)}</td>
+        <td>${r.pest_count.toLocaleString()}</td>
+        <td>${r.population.toLocaleString()}</td>
+        <td>${r.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderFinding(rows) {
+    const lead = rows[0];
+    const runnerUp = rows[1];
+    const lowest = rows[rows.length - 1];
+    const runnerUpRatio = lead.pest_per_100k / runnerUp.pest_per_100k;
+    const lowestRatio = (lead.pest_per_100k / lowest.pest_per_100k).toFixed(1);
+    const runnerUpPhrase = runnerUpRatio >= 2
+      ? `more than double ${boroLabel(runnerUp.boro)}'s`
+      : `${runnerUpRatio.toFixed(1)}× ${boroLabel(runnerUp.boro)}'s`;
+    const el = document.getElementById('finding-text');
+    el.textContent = `${boroLabel(lead.boro)} leads with ${lead.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})} rodent-related violations per 100,000 residents (${lead.pest_count.toLocaleString()} total) — ${runnerUpPhrase} ${runnerUp.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})} and ${lowestRatio}× ${boroLabel(lowest.boro)}'s ${lowest.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})}, even though both of those boroughs have more residents than ${boroLabel(lead.boro)}.`;
+  }
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const RAMP_LIGHT = [183, 211, 246]; // #b7d3f6 — sequential blue, light step
+  const RAMP_DARK = [13, 54, 107];    // #0d366b — sequential blue, dark step
+  const BORO_ABBR = {
+    BRONX: 'BX', BROOKLYN: 'BK', MANHATTAN: 'MN', QUEENS: 'QN', 'STATEN ISLAND': 'SI',
+  };
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function colorForValue(v, min, max) {
+    const t = max === min ? 1 : (v - min) / (max - min);
+    const r = Math.round(lerp(RAMP_LIGHT[0], RAMP_DARK[0], t));
+    const g = Math.round(lerp(RAMP_LIGHT[1], RAMP_DARK[1], t));
+    const b = Math.round(lerp(RAMP_LIGHT[2], RAMP_DARK[2], t));
+    return { hex: `rgb(${r},${g},${b})`, luminance: (0.299 * r + 0.587 * g + 0.114 * b) / 255 };
+  }
+
+  function renderMap(rows, geo) {
+    const svg = document.getElementById('boro-map');
+    const tooltip = document.getElementById('map-tooltip');
+    const wrap = svg.parentElement;
+    svg.setAttribute('viewBox', geo.viewBox);
+    svg.innerHTML = '';
+
+    const byBoro = Object.fromEntries(rows.map(r => [r.boro, r]));
+    const values = rows.map(r => r.pest_per_100k);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const leadBoro = rows[0].boro;
+
+    function showTooltip(evt, row) {
+      tooltip.innerHTML = '';
+      const name = document.createElement('div');
+      name.textContent = boroLabel(row.boro);
+      const value = document.createElement('div');
+      value.className = 'tt-value';
+      value.textContent = row.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' per 100k';
+      const count = document.createElement('div');
+      count.textContent = row.pest_count.toLocaleString() + ' violations';
+      tooltip.appendChild(name);
+      tooltip.appendChild(value);
+      tooltip.appendChild(count);
+      tooltip.classList.add('visible');
+      positionTooltip(evt);
+    }
+
+    function positionTooltip(evt) {
+      const rect = wrap.getBoundingClientRect();
+      tooltip.style.left = (evt.clientX - rect.left) + 'px';
+      tooltip.style.top = (evt.clientY - rect.top - 12) + 'px';
+    }
+
+    function hideTooltip() {
+      tooltip.classList.remove('visible');
+    }
+
+    Object.entries(geo.boroughs).forEach(([boro, shape]) => {
+      const row = byBoro[boro];
+      if (!row) return;
+      const color = colorForValue(row.pest_per_100k, min, max);
+
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', shape.path);
+      path.setAttribute('class', 'boro-path');
+      path.setAttribute('fill', color.hex);
+      path.setAttribute('tabindex', '0');
+      path.setAttribute('role', 'img');
+      path.setAttribute('aria-label',
+        `${boroLabel(boro)}: ${row.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})} rodent-related violations per 100,000 residents, ${row.pest_count.toLocaleString()} total`);
+
+      path.addEventListener('pointermove', (e) => showTooltip(e, row));
+      path.addEventListener('pointerenter', (e) => showTooltip(e, row));
+      path.addEventListener('pointerleave', hideTooltip);
+      path.addEventListener('focus', (e) => showTooltip(e, row));
+      path.addEventListener('blur', hideTooltip);
+
+      svg.appendChild(path);
+
+      const ink = color.luminance < 0.5 ? '#ffffff' : '#0b0b0b';
+
+      const abbr = document.createElementNS(SVG_NS, 'text');
+      abbr.setAttribute('x', shape.labelX);
+      abbr.setAttribute('y', boro === leadBoro ? shape.labelY - 6 : shape.labelY + 5);
+      abbr.setAttribute('class', 'boro-abbr');
+      abbr.setAttribute('fill', ink);
+      abbr.setAttribute('pointer-events', 'none');
+      abbr.textContent = BORO_ABBR[boro] || boro;
+      svg.appendChild(abbr);
+
+      if (boro === leadBoro) {
+        const val = document.createElementNS(SVG_NS, 'text');
+        val.setAttribute('x', shape.labelX);
+        val.setAttribute('y', shape.labelY + 14);
+        val.setAttribute('class', 'boro-value');
+        val.setAttribute('fill', ink);
+        val.textContent = row.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '/100k';
+        svg.appendChild(val);
+      }
+    });
+
+    const legend = document.getElementById('map-legend');
+    const lowColor = colorForValue(min, min, max).hex;
+    const highColor = colorForValue(max, min, max).hex;
+    legend.innerHTML = `
+      <span>${min.toLocaleString(undefined,{maximumFractionDigits:0})}</span>
+      <div class="legend-bar" style="background: linear-gradient(to right, ${lowColor}, ${highColor});"></div>
+      <span>${max.toLocaleString(undefined,{maximumFractionDigits:0})}</span>
+    `;
+  }
+
+  async function load() {
+    const status = document.getElementById('status');
+    try {
+      const [dataRes, geoRes] = await Promise.all([
+        fetch('/api/rodent-summary'),
+        fetch('/nyc-boroughs.json'),
+      ]);
+      if (!dataRes.ok) throw new Error('Server returned ' + dataRes.status);
+      if (!geoRes.ok) throw new Error('Map data returned ' + geoRes.status);
+      const payload = await dataRes.json();
+      const geo = await geoRes.json();
+      const rows = payload.data;
+      if (!rows || !rows.length) throw new Error('No data returned');
+
+      renderMap(rows, geo);
+      renderChart(rows);
+      renderTable(rows);
+      renderFinding(rows);
+      status.textContent = 'Live from NYC Open Data · fetched ' + new Date(payload.fetched_at).toLocaleString();
+    } catch (err) {
+      status.textContent = 'Could not load live data (' + err.message + '). Is the server running (npm start)?';
+      status.className = 'status error';
+    }
+  }
+
+  document.getElementById('table-toggle').addEventListener('click', () => {
+    const table = document.getElementById('data-table');
+    const btn = document.getElementById('table-toggle');
+    const visible = table.classList.toggle('visible');
+    btn.textContent = visible ? 'Hide data table' : 'Show data table';
+  });
+
+  load();
+</script>
+</body>
+</html>
