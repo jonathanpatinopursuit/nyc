@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Rat problem NYC</title>
+<title>Live: Where NYC's Rat Problem Is Worst</title>
 <style>
   :root {
     --surface-1:      #fcfcfb;
@@ -16,6 +16,7 @@
     --series-accent:  #2a78d6;
     --series-muted:   #b7d3f6;
     --border:         rgba(11,11,11,0.10);
+    --danger:         #d03b3b;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -29,6 +30,7 @@
       --series-accent:  #3987e5;
       --series-muted:   #184f95;
       --border:         rgba(255,255,255,0.10);
+      --danger:         #e66767;
     }
   }
 
@@ -59,31 +61,75 @@
     margin: 0 0 28px;
     letter-spacing: -0.01em;
   }
-  .story p {
+  .story-list {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+  }
+  .story-list li {
+    position: relative;
     font-size: 18px;
     color: var(--text-secondary);
     margin: 0 0 20px;
+    padding-left: 24px;
   }
-  .story p.finding {
-    color: var(--text-primary);
-    font-weight: 500;
+  .story-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--series-accent);
   }
-  .story p.sowhat {
-    padding: 16px 18px;
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-weight: 500;
+  .sowhat-list {
+    list-style: none;
+    margin: 0 0 40px;
+    padding: 0;
   }
-  .sowhat-label {
-    display: block;
-    font-size: 12px;
+  .sowhat-list li {
+    position: relative;
+    font-size: 17px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    line-height: 1.5;
+    color: var(--danger);
+    margin: 0 0 12px;
+    padding-left: 24px;
+  }
+  .sowhat-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+  }
+  .sowhat-list a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+  .sowhat-list a:hover,
+  .sowhat-list a:focus-visible {
+    text-decoration-thickness: 3px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--gridline);
+    margin: 28px 0;
+  }
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
     text-transform: uppercase;
-    color: var(--series-accent);
-    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+    margin: 0 0 16px;
   }
 
   .chart-card {
@@ -240,23 +286,12 @@
     margin: 8px 0 0;
   }
 
-  .table-toggle {
-    background: none;
-    border: none;
-    color: var(--series-accent);
-    font-size: 13px;
-    cursor: pointer;
-    padding: 0;
-    margin: 12px 0 20px;
-  }
   table.data-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    margin: 0 0 24px;
-    display: none;
+    margin: 12px 0 24px;
   }
-  table.data-table.visible { display: table; }
   table.data-table th, table.data-table td {
     text-align: right;
     padding: 6px 8px;
@@ -288,10 +323,21 @@
 </head>
 <body>
 <main>
-  <p class="kicker">New York City &middot; Housing Data</p>
-  <h1>Rat problem NYC</h1>
+  <h1>Live: Where NYC's Rat Problem Is Worst</h1>
 
-  <div class="chart-card map-card">
+  <ul class="story-list">
+    <li>There's a place in New York City where landlords get cited for rats and mice at more than five times the rate of the least-affected borough.</li>
+    <li>I counted every violation citing rodents, rats, or mice for each borough, then divided by that borough's 2020 Census population to get a fair rate per 100,000 residents.</li>
+    <li>This comes from NYC Open Data's HPD Housing Maintenance Code Violations dataset, covering every violation issued citywide from January 2020 through today, across all five boroughs.</li>
+  </ul>
+
+  <ul class="sowhat-list">
+    <li>If you live in 10456, 10457, 10458, 10467, or 10453</li>
+    <li>Call <a href="tel:311">311</a> to report rodent conditions now.</li>
+    <li>Do it before fall rodent season starts September 1, 2026.</li>
+  </ul>
+
+  <div class="chart-card">
     <p class="chart-title">Rodent-related HPD violations per 100,000 residents</p>
     <p class="chart-subtitle">By borough, violations issued Jan 2020&ndash;present</p>
     <div class="map-wrap">
@@ -300,32 +346,16 @@
     </div>
     <div class="map-legend" id="map-legend"></div>
     <p class="map-legend-caption">Darker = more rodent-related violations per 100,000 residents. Hover or tab through a borough for exact figures.</p>
+
+    <div class="divider"></div>
+
+    <p class="section-label">Ranked by borough</p>
+    <div id="chart"></div>
+
     <p class="chart-note">Source: NYC Open Data &mdash; HPD Housing Maintenance Code Violations (dataset csn4-vhvf) and Borough Boundaries (dataset gthc-hcne).</p>
   </div>
 
-  <div class="story">
-    <p>There's a place in New York City where landlords get cited for rats and mice at more than five times the rate of the least-affected borough.</p>
-
-    <p>This comes from NYC Open Data's HPD Housing Maintenance Code Violations dataset, covering every violation issued citywide from January 2020 through today, across all five boroughs.</p>
-
-    <p>I counted every violation citing rodents, rats, or mice for each borough, then divided by that borough's 2020 Census population to get a fair rate per 100,000 residents.</p>
-
-    <p class="finding" id="finding-text">Loading the finding from live data&hellip;</p>
-
-    <p class="sowhat">
-      <span class="sowhat-label">So what</span>
-      HPD should add the Bronx's five highest-violation ZIP codes &mdash; 10456, 10457, 10458, 10467, and 10453 &mdash; to its proactive inspection list before the fall rodent season starts on September 1, 2026, instead of waiting for resident complaints to trigger action.
-    </p>
-  </div>
-
-  <div class="chart-card">
-    <p class="chart-title">The comparison, borough by borough</p>
-    <p class="chart-subtitle">Same data as the map above, ranked</p>
-    <div id="chart"></div>
-    <p class="chart-note">Source: NYC Open Data, HPD Housing Maintenance Code Violations (dataset csn4-vhvf). Rate = violations mentioning "rodent," "rats," or "mice," divided by 2020 Census borough population, &times; 100,000.</p>
-  </div>
-
-  <button class="table-toggle" id="table-toggle" type="button">Show data table</button>
+  <p class="section-label" style="margin-top: 40px;">Full data table</p>
   <table class="data-table" id="data-table">
     <thead>
       <tr><th>Borough</th><th>Violations</th><th>Population</th><th>Per 100k</th></tr>
@@ -390,19 +420,6 @@
         <td>${r.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
       </tr>
     `).join('');
-  }
-
-  function renderFinding(rows) {
-    const lead = rows[0];
-    const runnerUp = rows[1];
-    const lowest = rows[rows.length - 1];
-    const runnerUpRatio = lead.pest_per_100k / runnerUp.pest_per_100k;
-    const lowestRatio = (lead.pest_per_100k / lowest.pest_per_100k).toFixed(1);
-    const runnerUpPhrase = runnerUpRatio >= 2
-      ? `more than double ${boroLabel(runnerUp.boro)}'s`
-      : `${runnerUpRatio.toFixed(1)}× ${boroLabel(runnerUp.boro)}'s`;
-    const el = document.getElementById('finding-text');
-    el.textContent = `${boroLabel(lead.boro)} leads with ${lead.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})} rodent-related violations per 100,000 residents (${lead.pest_count.toLocaleString()} total) — ${runnerUpPhrase} ${runnerUp.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})} and ${lowestRatio}× ${boroLabel(lowest.boro)}'s ${lowest.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})}, even though both of those boroughs have more residents than ${boroLabel(lead.boro)}.`;
   }
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -532,20 +549,12 @@
       renderMap(rows, geo);
       renderChart(rows);
       renderTable(rows);
-      renderFinding(rows);
       status.textContent = 'Live from NYC Open Data · fetched ' + new Date(payload.fetched_at).toLocaleString();
     } catch (err) {
       status.textContent = 'Could not load live data (' + err.message + '). Is the server running (npm start)?';
       status.className = 'status error';
     }
   }
-
-  document.getElementById('table-toggle').addEventListener('click', () => {
-    const table = document.getElementById('data-table');
-    const btn = document.getElementById('table-toggle');
-    const visible = table.classList.toggle('visible');
-    btn.textContent = visible ? 'Hide data table' : 'Show data table';
-  });
 
   load();
 </script>
