@@ -47,17 +47,14 @@
   }
 
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
+    overflow: hidden;
     background: var(--page-plane);
     color: var(--text-primary);
     font-family: var(--serif);
     line-height: 1.6;
-  }
-  main {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 20px 96px;
   }
   h1 {
     font-family: var(--sans);
@@ -82,29 +79,61 @@
     transform: translateY(-3px);
   }
 
-  /* Hero: rat photo as a full-bleed background band, dark scrim so the
-     white headline stays legible, white page around it. */
-  .hero {
-    position: relative;
-    margin: 0 calc(50% - 50vw) 40px;
-    padding: 0 calc(50vw - 50%);
-    height: min(66vh, 480px);
-    min-height: 320px;
-    display: flex;
+  /* Slide deck: one section per beat, shown/hidden via JS, advanced with the keyboard. */
+  .slide {
+    display: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    align-items: center;
+    overflow-y: auto;
+  }
+  .slide.active { display: flex; }
+  .slide-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 64px 20px;
+  }
+  .slide-eyebrow {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 18px;
+  }
+  .slide-statement {
+    font-family: var(--serif);
+    font-size: clamp(22px, 4vw, 32px);
+    line-height: 1.4;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  /* Hero slide: rat photo as a full-bleed background, dark scrim so the
+     white headline stays legible. */
+  .slide-hero {
+    display: none;
     align-items: flex-end;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
     overflow: hidden;
     background-image: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.15) 100%), url('/rat.jpg');
     background-size: cover;
     background-position: center 30%;
   }
+  .slide-hero.active { display: flex; }
   .hero-inner {
     position: relative;
     width: 100%;
     max-width: 720px;
     margin: 0 auto;
-    padding: 40px 20px 32px;
+    padding: 40px 20px 72px;
   }
-  .hero h1 {
+  .slide-hero h1 {
     color: #ffffff;
     margin: 0 0 14px;
   }
@@ -115,6 +144,15 @@
     color: rgba(255,255,255,0.92);
     max-width: 58ch;
     margin: 0;
+  }
+  .hero-hint {
+    margin: 32px 0 0;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
   }
   .chip {
     display: inline-block;
@@ -156,7 +194,7 @@
   }
   .sowhat-list {
     list-style: none;
-    margin: 0 0 40px;
+    margin: 0 0 8px;
     padding: 0;
   }
   .sowhat-list li {
@@ -190,7 +228,7 @@
   }
 
   .zip-card {
-    margin: 8px 0 32px;
+    margin: 8px 0 0;
     padding: 22px 24px;
     background: var(--surface-1);
     border: 1px solid var(--border);
@@ -261,7 +299,7 @@
   }
 
   .chart-card {
-    margin: 40px 0 8px;
+    margin: 0;
     padding: 24px 24px 12px;
     background: var(--surface-1);
     border: 1px solid var(--border);
@@ -278,6 +316,13 @@
     font-family: var(--sans);
     font-size: 13px;
     color: var(--text-muted);
+    margin: 0 0 20px;
+  }
+  .chart-explainer {
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-secondary);
     margin: 0 0 20px;
   }
   .bar-row {
@@ -440,66 +485,145 @@
     font-size: 12px;
     color: var(--text-muted);
   }
+
+  /* Fixed deck navigation: progress dots + keyboard hint. Uses
+     mix-blend-mode so it stays legible over both the white slides
+     and the dark hero photo without separate light/dark styles. */
+  .deck-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .deck-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .deck-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: #ffffff;
+    opacity: 0.45;
+    mix-blend-mode: difference;
+    transition: width 0.2s ease, opacity 0.2s ease;
+  }
+  .deck-dot.active {
+    width: 18px;
+    opacity: 1;
+  }
+  .deck-hint {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #ffffff;
+    opacity: 0.6;
+    mix-blend-mode: difference;
+  }
 </style>
 </head>
 <body>
-<div class="hero">
+
+<section class="slide slide-hero active" data-slide>
   <div class="hero-inner">
     <h1><span class="live-badge">Live</span>NYC's Rat Problem</h1>
     <p class="hero-tagline">There's a place in New York City where landlords get cited for rats and mice at more than five times the rate of the least-affected borough.</p>
+    <p class="hero-hint">Press &rarr; or Space to continue</p>
   </div>
-</div>
-<main>
-  <ul class="story-list">
-    <li>I counted every violation citing rodents, rats, or mice for each borough, then divided by that borough's 2020 Census population to get a fair rate per 100,000 residents.</li>
-    <li>This comes from NYC Open Data's HPD Housing Maintenance Code Violations dataset, covering every violation issued citywide from January 2020 through today, across all five boroughs.</li>
-  </ul>
+</section>
 
-  <p class="section-label">Check your zip code</p>
-  <div class="zip-card">
-    <form class="zip-form" id="zip-form">
-      <input class="zip-input" id="zip-input" type="text" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="Enter your NYC zip code (e.g. 10456)" aria-label="NYC zip code" />
-      <button class="zip-submit" type="submit">Look up</button>
-    </form>
-    <p class="zip-result" id="zip-result">Type a 5-digit NYC zip code to see its rodent violation count and citywide rank.</p>
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <p class="slide-eyebrow">How I analyzed it</p>
+    <p class="slide-statement">I counted every violation citing rodents, rats, or mice for each borough, then divided by that borough's 2020 Census population to get a fair rate per 100,000 residents.</p>
   </div>
+</section>
 
-  <ul class="sowhat-list" id="sowhat-list">
-    <li id="sowhat-zip">If you live in <span class="chip chip-bronx">10456, 10457, 10458, 10467, or 10453</span></li>
-    <li>Call <a href="tel:311">311</a> to report rodent conditions now.</li>
-    <li>Do it before fall rodent season starts September 1, 2026.</li>
-  </ul>
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <ul class="story-list">
+      <li>This comes from NYC Open Data's HPD Housing Maintenance Code Violations dataset, covering every violation issued citywide from January 2020 through today, across all five boroughs.</li>
+    </ul>
+    <ul class="sowhat-list">
+      <li id="sowhat-zip">If you live in <span class="chip chip-bronx">10456, 10457, 10458, 10467, or 10453</span></li>
+    </ul>
+  </div>
+</section>
 
-  <div class="chart-card">
-    <p class="chart-title">Rodent-related HPD violations per 100,000 residents</p>
-    <p class="chart-subtitle">By borough, violations issued Jan 2020&ndash;present</p>
-    <div class="map-wrap">
-      <svg id="boro-map" viewBox="0 0 600 600" role="img" aria-label="Choropleth map of New York City's five boroughs, shaded by rodent-related housing violations per 100,000 residents"></svg>
-      <div class="map-tooltip" id="map-tooltip"></div>
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <ul class="sowhat-list">
+      <li>Call <a href="tel:311">311</a> to report rodent conditions now.</li>
+      <li>Do it before fall rodent season starts September 1, 2026.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <div class="chart-card">
+      <p class="chart-title">Rodent-related HPD violations per 100,000 residents</p>
+      <p class="chart-subtitle">By borough, violations issued Jan 2020&ndash;present</p>
+      <div class="map-wrap">
+        <svg id="boro-map" viewBox="0 0 600 600" role="img" aria-label="Choropleth map of New York City's five boroughs, shaded by rodent-related housing violations per 100,000 residents"></svg>
+        <div class="map-tooltip" id="map-tooltip"></div>
+      </div>
+      <div class="map-legend" id="map-legend"></div>
+      <p class="map-legend-caption">Ranked highest to lowest, left to right. Hover or tab through a borough for exact figures.</p>
     </div>
-    <div class="map-legend" id="map-legend"></div>
-    <p class="map-legend-caption">Ranked highest to lowest, left to right. Hover or tab through a borough for exact figures.</p>
-
-    <div class="divider"></div>
-
-    <p class="section-label">Ranked by borough</p>
-    <div id="chart"></div>
-
-    <p class="chart-note">Source: NYC Open Data &mdash; HPD Housing Maintenance Code Violations (dataset csn4-vhvf) and Borough Boundaries (dataset gthc-hcne).</p>
   </div>
+</section>
 
-  <p class="section-label" style="margin-top: 40px;">Full data table</p>
-  <table class="data-table" id="data-table">
-    <thead>
-      <tr><th>Borough</th><th>Violations</th><th>Population</th><th>Per 100k</th></tr>
-    </thead>
-    <tbody id="data-table-body"></tbody>
-  </table>
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <div class="chart-card">
+      <p class="section-label">Ranked by borough</p>
+      <p class="chart-explainer">Each bar is violations per 100,000 residents, not raw counts &mdash; so a borough isn't penalized or credited just for having more people. The Bronx leads by a wide margin.</p>
+      <div id="chart"></div>
+      <p class="chart-note">Source: NYC Open Data &mdash; HPD Housing Maintenance Code Violations (dataset csn4-vhvf) and Borough Boundaries (dataset gthc-hcne).</p>
+    </div>
+  </div>
+</section>
 
-  <p class="status" id="status">Fetching live data from NYC Open Data&hellip;</p>
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <p class="section-label">Full data table</p>
+    <table class="data-table" id="data-table">
+      <thead>
+        <tr><th>Borough</th><th>Violations</th><th>Population</th><th>Per 100k</th></tr>
+      </thead>
+      <tbody id="data-table-body"></tbody>
+    </table>
+    <p class="status" id="status">Fetching live data from NYC Open Data&hellip;</p>
+  </div>
+</section>
 
-  <footer>Data refreshes on every page load via a live query to NYC Open Data (Socrata). Population figures are 2020 U.S. Census borough totals.</footer>
-</main>
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <p class="section-label">Check your zip code</p>
+    <div class="zip-card">
+      <form class="zip-form" id="zip-form">
+        <input class="zip-input" id="zip-input" type="text" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="Enter your NYC zip code (e.g. 10456)" aria-label="NYC zip code" />
+        <button class="zip-submit" type="submit">Look up</button>
+      </form>
+      <p class="zip-result" id="zip-result">Type a 5-digit NYC zip code to see its rodent violation count and citywide rank.</p>
+    </div>
+    <footer>Data refreshes on every page load via a live query to NYC Open Data (Socrata). Population figures are 2020 U.S. Census borough totals.</footer>
+  </div>
+</section>
+
+<nav class="deck-nav">
+  <div class="deck-dots" id="deck-dots"></div>
+  <div class="deck-hint" id="deck-hint">Use &larr; &rarr; or Space</div>
+</nav>
 
 <script>
   function boroLabel(boro) {
@@ -732,6 +856,36 @@
 
   load();
   loadZipData();
+
+  // Slide deck: 8 beats, advanced with the keyboard.
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('deck-dots');
+  dotsWrap.innerHTML = slides.map((_, i) => `<span class="deck-dot${i === 0 ? ' active' : ''}"></span>`).join('');
+  const dots = Array.from(dotsWrap.children);
+  let current = 0;
+
+  function goTo(index) {
+    const next = Math.max(0, Math.min(slides.length - 1, index));
+    if (next === current) return;
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current = next;
+    slides[current].classList.add('active');
+    dots[current].classList.add('active');
+  }
+
+  window.addEventListener('keydown', (e) => {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return; // let zip lookup typing/Enter work normally
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault();
+      goTo(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      goTo(current - 1);
+    }
+  });
 </script>
 </body>
 </html>
