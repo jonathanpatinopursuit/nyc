@@ -83,6 +83,37 @@ app.get('/api/rodent-summary', async (req, res) => {
   }
 });
 
+// Live pull from NYC Open Data: rodent/rat/mice-related violations per zip code
+// since 2020, so the front end can offer a "look up your zip" lookup.
+app.get('/api/rodent-by-zip', async (req, res) => {
+  try {
+    const rows = await sodaGroupCount(
+      'zip, count(*) as violation_count',
+      `${DATE_WHERE} AND ${PEST_WHERE} AND zip IS NOT NULL`,
+      'zip'
+    );
+
+    const byZip = rows
+      .map((row) => ({
+        zip: (row.zip || '').trim(),
+        violation_count: parseInt(row.violation_count, 10),
+      }))
+      .filter((row) => /^\d{5}$/.test(row.zip))
+      .sort((a, b) => b.violation_count - a.violation_count)
+      .map((row, i) => ({ ...row, rank: i + 1 }));
+
+    res.json({
+      source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
+      timeframe: '2020-01-01 to present',
+      fetched_at: new Date().toISOString(),
+      total_zips: byZip.length,
+      data: byZip,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/nyc-data', async (req, res) => {
