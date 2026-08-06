@@ -69,15 +69,15 @@
   }
   .live-badge {
     display: inline-block;
-    font-size: clamp(14px, 2vw, 18px);
+    font-size: clamp(18px, 2.8vw, 26px);
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #ffffff;
     background: var(--danger);
-    padding: 8px 18px;
+    padding: 10px 24px;
     border-radius: 999px;
-    margin: 0 0 20px;
+    margin: 0 0 40px;
   }
 
   /* Slide deck: one section per beat, shown/hidden via JS, advanced with the keyboard. */
@@ -117,7 +117,7 @@
      white headline stays legible. */
   .slide-hero {
     display: none;
-    align-items: center;
+    align-items: flex-end;
     min-height: 100vh;
     min-height: 100dvh;
     width: 100%;
@@ -132,29 +132,12 @@
     width: 100%;
     max-width: 720px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 40px 20px 14vh;
     text-align: center;
   }
   .slide-hero h1 {
     color: #ffffff;
     margin: 0 0 14px;
-  }
-  .hero-tagline {
-    font-family: var(--serif);
-    font-size: clamp(16px, 2.4vw, 19px);
-    line-height: 1.5;
-    color: rgba(255,255,255,0.92);
-    max-width: 58ch;
-    margin: 0 auto;
-  }
-  .hero-hint {
-    margin: 32px 0 0;
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.7);
   }
   .chip {
     display: inline-block;
@@ -538,8 +521,6 @@
   <div class="hero-inner">
     <span class="live-badge">Live</span>
     <h1>NYC's Rat Problem</h1>
-    <p class="hero-tagline">There's a place in New York City where landlords get cited for rats and mice at more than five times the rate of the least-affected borough.</p>
-    <p class="hero-hint">Press &rarr; or Space to continue</p>
   </div>
 </section>
 
