@@ -47,7 +47,7 @@ async function sodaGroupCount(select, where, group) {
 const app = express();
 
 // Live pull from NYC Open Data (HPD Housing Maintenance Code Violations):
-// rodent/rat/mice-related violations per borough since 2024, normalized per 100k residents.
+// rodent/rat/mice-related violations per borough since 2020, normalized per 100k residents.
 app.get('/api/rodent-summary', async (req, res) => {
   try {
     const pestRows = await sodaGroupCount(
