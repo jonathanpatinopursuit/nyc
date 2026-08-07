@@ -98,11 +98,12 @@
   }
   .slide-eyebrow {
     font-family: var(--sans);
-    font-size: 13px;
+    font-size: 40px;
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    text-align: center;
     margin: 0 0 18px;
   }
   .slide-statement {
@@ -111,6 +112,19 @@
     line-height: 1.4;
     color: var(--text-primary);
     margin: 0;
+  }
+  .slide-statement .stat-emphasis {
+    color: var(--danger);
+    font-weight: 700;
+  }
+  .slide-statement + .slide-statement {
+    margin-top: 24px;
+  }
+  .slide-zip-teaser {
+    text-align: center;
+  }
+  .slide-zip-teaser .slide-statement {
+    font-size: clamp(26px, 5.2vw, 42px);
   }
 
   /* Hero slide: rat photo as a full-bleed background, dark scrim so the
@@ -154,6 +168,43 @@
   .chip-manhattan     { background: var(--boro-manhattan); }
   .chip-queens        { background: var(--boro-queens); }
   .chip-statenisland  { background: var(--boro-statenisland); color: #0b0b0b; }
+
+  .method-steps {
+    list-style: none;
+    counter-reset: step;
+    margin: 0;
+    padding: 0;
+  }
+  .method-steps li {
+    position: relative;
+    counter-increment: step;
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    margin: 0 0 24px;
+    padding-left: 44px;
+  }
+  .method-steps li:last-child {
+    margin-bottom: 0;
+  }
+  .method-steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #ffffff;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+  }
 
   .story-list {
     list-style: none;
@@ -210,6 +261,115 @@
   .sowhat-list a:hover,
   .sowhat-list a:focus-visible {
     text-decoration-thickness: 3px;
+  }
+
+  .cta-wrap {
+    text-align: center;
+  }
+  .cta-map-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 16px;
+  }
+  #bronx-zip-map {
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    overflow: visible;
+  }
+  .bronx-zip-path {
+    stroke: var(--page-plane);
+    stroke-width: 1.5;
+  }
+  .bronx-zip-path.affected {
+    fill: var(--danger);
+  }
+  .bronx-zip-path.unaffected {
+    fill: var(--surface-1);
+  }
+  .bronx-zip-badge {
+    fill: #ffffff;
+    stroke: var(--text-primary);
+    stroke-width: 1.5;
+  }
+  .bronx-zip-label {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 17px;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    fill: var(--text-primary);
+  }
+  .cta-map-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 0 28px;
+  }
+  .cta-map-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--danger);
+    flex: 0 0 auto;
+  }
+  .cta-map-caption {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  .cta-risk-line {
+    font-family: var(--serif);
+    font-size: clamp(20px, 3.6vw, 28px);
+    line-height: 1.4;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 32px;
+  }
+  .cta-risk-line:empty {
+    display: none;
+  }
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 320px;
+    padding: 20px 32px;
+    background: var(--danger);
+    color: #ffffff;
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 20px;
+    text-decoration: none;
+    border-radius: 999px;
+    box-shadow: 0 10px 26px rgba(230,103,103,0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta-button:hover,
+  .cta-button:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(230,103,103,0.45);
+  }
+  .cta-tell {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 16px 0 0;
+  }
+  .cta-caption {
+    font-family: var(--serif);
+    font-size: clamp(19px, 3vw, 24px);
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--text-primary);
+    margin: 32px 0 0;
   }
 
   .zip-card {
@@ -357,6 +517,46 @@
     white-space: nowrap;
   }
   .bar-row.lead .bar-value { font-weight: 700; }
+
+  .source-card {
+    margin: 32px 0 0;
+    padding: 0;
+  }
+  .source-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 20px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--gridline);
+  }
+  .source-row:first-child {
+    border-top: 1px solid var(--gridline);
+  }
+  .source-row dt {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex: 0 0 auto;
+    margin: 0;
+  }
+  .source-row dd {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  .slide-centered {
+    text-align: center;
+  }
+  .slide-centered .source-card {
+    text-align: left;
+  }
 
   .chart-note {
     font-size: 12px;
@@ -525,35 +725,57 @@
 </section>
 
 <section class="slide" data-slide>
-  <div class="slide-inner">
-    <p class="slide-statement">Landlords in one NYC zipcode face five times more rodent citations than the city's cleanest one.</p>
+  <div class="slide-inner slide-zip-teaser">
+    <p class="slide-statement">Residents in one NYC zip code<br>face <span class="stat-emphasis">5x</span> more rodent citations<br>than the city's cleanest one.</p>
+    <p class="slide-statement">Check your zip code to see<br>rodent violation rank.</p>
   </div>
 </section>
 
 <section class="slide" data-slide>
   <div class="slide-inner">
     <p class="slide-eyebrow">How I analyzed it</p>
-    <p class="slide-statement">I counted every violation citing rodents, rats, or mice for each borough, then divided by that borough's 2020 Census population to get a fair rate per 100,000 residents.</p>
+    <ol class="method-steps">
+      <li>Counted every violation citing rodents, rats, or mice</li>
+      <li>Grouped the violations by borough</li>
+      <li>Divided by each borough's 2020 Census population to get a fair rate per 100,000 residents</li>
+    </ol>
   </div>
 </section>
 
 <section class="slide" data-slide>
-  <div class="slide-inner">
-    <ul class="story-list">
-      <li>This comes from NYC Open Data's HPD Housing Maintenance Code Violations dataset, covering every violation issued citywide from January 2020 through today, across all five boroughs.</li>
-    </ul>
-    <ul class="sowhat-list">
-      <li id="sowhat-zip">If you live in <span class="chip chip-bronx">10456, 10457, 10458, 10467, or 10453</span></li>
-    </ul>
+  <div class="slide-inner slide-centered">
+    <p class="slide-eyebrow">The data</p>
+    <p class="slide-statement">Every rodent housing violation NYC<br>has logged since 2020.</p>
+    <dl class="source-card">
+      <div class="source-row">
+        <dt>Source</dt>
+        <dd>NYC Open Data &mdash; HPD Housing Maintenance Code Violations</dd>
+      </div>
+      <div class="source-row">
+        <dt>Time span</dt>
+        <dd>January 2020 &ndash; today</dd>
+      </div>
+      <div class="source-row">
+        <dt>Coverage</dt>
+        <dd>All five boroughs</dd>
+      </div>
+    </dl>
   </div>
 </section>
 
 <section class="slide" data-slide>
-  <div class="slide-inner">
-    <ul class="sowhat-list">
-      <li>Call <a href="tel:311">311</a> to report rodent conditions now.</li>
-      <li>Do it before fall rodent season starts September 1, 2026.</li>
-    </ul>
+  <div class="slide-inner cta-wrap">
+    <div class="cta-map-wrap">
+      <svg id="bronx-zip-map" viewBox="0 0 360 300" role="img" aria-label="Map of Bronx zip codes with the five highest rodent-violation zip codes highlighted in red"></svg>
+    </div>
+    <div class="cta-map-legend">
+      <span class="cta-map-legend-swatch"></span>
+      <p class="cta-map-caption">Zip code with highest rodent violation rates</p>
+    </div>
+    <p class="cta-risk-line" id="sowhat-zip"></p>
+    <a class="cta-button" href="tel:311">Call 311 now</a>
+    <p class="cta-tell">Tell them about the rodent infestation.</p>
+    <p class="cta-caption">Do it before<br>fall rodent season starts September 1, 2026.</p>
   </div>
 </section>
 
@@ -844,8 +1066,59 @@
     lookupZip(document.getElementById('zip-input').value.trim());
   });
 
+  const BRONX_WORST_ZIPS = ['10453', '10456', '10457', '10458', '10467'];
+
+  async function renderBronxZipMap() {
+    const svg = document.getElementById('bronx-zip-map');
+    try {
+      const res = await fetch('/bronx-zips.json');
+      if (!res.ok) throw new Error('Map data returned ' + res.status);
+      const geo = await res.json();
+      svg.setAttribute('viewBox', geo.viewBox);
+      svg.innerHTML = '';
+      const entries = Object.entries(geo.zips);
+
+      entries.forEach(([zip, shape]) => {
+        const affected = BRONX_WORST_ZIPS.includes(zip);
+        const path = document.createElementNS(SVG_NS, 'path');
+        path.setAttribute('d', shape.path);
+        path.setAttribute('class', 'bronx-zip-path ' + (affected ? 'affected' : 'unaffected'));
+        const title = document.createElementNS(SVG_NS, 'title');
+        title.textContent = zip;
+        path.appendChild(title);
+        svg.appendChild(path);
+      });
+
+      // Draw badges in a second pass so they always sit on top of every
+      // zip shape, including ones drawn after their own.
+      const badgeWidth = 54;
+      const badgeHeight = 26;
+      entries.forEach(([zip, shape]) => {
+        if (!BRONX_WORST_ZIPS.includes(zip)) return;
+        const badge = document.createElementNS(SVG_NS, 'rect');
+        badge.setAttribute('x', shape.labelX - badgeWidth / 2);
+        badge.setAttribute('y', shape.labelY - badgeHeight / 2);
+        badge.setAttribute('width', badgeWidth);
+        badge.setAttribute('height', badgeHeight);
+        badge.setAttribute('rx', 13);
+        badge.setAttribute('class', 'bronx-zip-badge');
+        svg.appendChild(badge);
+
+        const label = document.createElementNS(SVG_NS, 'text');
+        label.setAttribute('x', shape.labelX);
+        label.setAttribute('y', shape.labelY + 1);
+        label.setAttribute('class', 'bronx-zip-label');
+        label.textContent = zip;
+        svg.appendChild(label);
+      });
+    } catch (err) {
+      svg.setAttribute('aria-label', 'Bronx zip code map failed to load');
+    }
+  }
+
   load();
   loadZipData();
+  renderBronxZipMap();
 
   // Slide deck: 8 beats, advanced with the keyboard.
   const slides = Array.from(document.querySelectorAll('.slide'));
