@@ -751,9 +751,43 @@
     opacity: 0.6;
     mix-blend-mode: difference;
   }
+
+  /* Tap targets for touch nav — deck-nav itself stays pointer-events:none
+     so it never blocks taps on slide content underneath; only the two
+     arrow buttons opt back in. */
+  .deck-arrow {
+    position: fixed;
+    bottom: 12px;
+    z-index: 6;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(11,11,11,0.4);
+    color: #ffffff;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .deck-arrow:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+  .deck-arrow-prev { left: 10px; }
+  .deck-arrow-next { right: 10px; }
+  @media (min-width: 720px) {
+    .deck-arrow { display: none; }
+  }
 </style>
 </head>
 <body>
+
+<button class="deck-arrow deck-arrow-prev" id="deck-prev" aria-label="Previous slide">&larr;</button>
+<button class="deck-arrow deck-arrow-next" id="deck-next" aria-label="Next slide">&rarr;</button>
 
 <section class="slide slide-hero active" data-slide>
   <div class="hero-inner">
@@ -907,7 +941,7 @@
 
 <nav class="deck-nav">
   <div class="deck-dots" id="deck-dots"></div>
-  <div class="deck-hint" id="deck-hint">Use &larr; &rarr; or Space</div>
+  <div class="deck-hint" id="deck-hint">Swipe, tap the arrows, or use &larr; &rarr;</div>
 </nav>
 
 <script>
@@ -1213,8 +1247,13 @@
   const dots = Array.from(dotsWrap.children);
   let current = 0;
 
+  const prevBtn = document.getElementById('deck-prev');
+  const nextBtn = document.getElementById('deck-next');
+
   function goTo(index) {
     const next = Math.max(0, Math.min(slides.length - 1, index));
+    prevBtn.disabled = next === 0;
+    nextBtn.disabled = next === slides.length - 1;
     if (next === current) return;
     slides[current].classList.remove('active');
     dots[current].classList.remove('active');
@@ -1222,6 +1261,10 @@
     slides[current].classList.add('active');
     dots[current].classList.add('active');
   }
+  goTo(0);
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
 
   window.addEventListener('keydown', (e) => {
     const tag = document.activeElement && document.activeElement.tagName;
@@ -1235,6 +1278,26 @@
       goTo(current - 1);
     }
   });
+
+  // Swipe nav for touch devices — the deck previously advanced only via
+  // keyboard, which left phones with no way to move past the first slide.
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTarget = null;
+
+  window.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+    touchStartTarget = e.target;
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if (touchStartTarget && touchStartTarget.closest('input, textarea, button, a, .zip-form')) return;
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    const dy = e.changedTouches[0].screenY - touchStartY;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // too short or too vertical
+    goTo(current + (dx < 0 ? 1 : -1));
+  }, { passive: true });
 </script>
 </body>
 </html>
