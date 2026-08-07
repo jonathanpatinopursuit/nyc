@@ -83,8 +83,8 @@
   /* Slide deck: one section per beat, shown/hidden via JS, advanced with the keyboard. */
   .slide {
     display: none;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
     width: 100%;
     align-items: center;
     overflow-y: auto;
@@ -501,20 +501,28 @@
     align-items: center;
     gap: 8px;
     z-index: 5;
-    pointer-events: none;
   }
   .deck-dots {
     display: flex;
     gap: 6px;
   }
   .deck-dot {
+    position: relative;
     width: 6px;
     height: 6px;
+    border: none;
+    padding: 0;
     border-radius: 3px;
-    background: #ffffff;
+    background-color: #ffffff;
     opacity: 0.45;
     mix-blend-mode: difference;
     transition: width 0.2s ease, opacity 0.2s ease;
+    cursor: pointer;
+  }
+  .deck-dot::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
   }
   .deck-dot.active {
     width: 18px;
@@ -625,7 +633,7 @@
 
 <nav class="deck-nav">
   <div class="deck-dots" id="deck-dots"></div>
-  <div class="deck-hint" id="deck-hint">Use &larr; &rarr; or Space</div>
+  <div class="deck-hint" id="deck-hint">Scroll, swipe, or use &larr; &rarr;</div>
 </nav>
 
 <script>
@@ -863,7 +871,9 @@
   // Slide deck: 8 beats, advanced with the keyboard.
   const slides = Array.from(document.querySelectorAll('.slide'));
   const dotsWrap = document.getElementById('deck-dots');
-  dotsWrap.innerHTML = slides.map((_, i) => `<span class="deck-dot${i === 0 ? ' active' : ''}"></span>`).join('');
+  dotsWrap.innerHTML = slides
+    .map((_, i) => `<button type="button" class="deck-dot${i === 0 ? ' active' : ''}" aria-label="Go to slide ${i + 1}"></button>`)
+    .join('');
   const dots = Array.from(dotsWrap.children);
   let current = 0;
 
@@ -877,6 +887,8 @@
     dots[current].classList.add('active');
   }
 
+  dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+
   window.addEventListener('keydown', (e) => {
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return; // let zip lookup typing/Enter work normally
@@ -889,6 +901,43 @@
       goTo(current - 1);
     }
   });
+
+  // A slide only hands the gesture to the deck once its own scroll is
+  // pinned at the edge the user is pushing toward — so a tall slide (the
+  // chart or data table on a short window) scrolls internally first.
+  function atSlideEdge(direction) {
+    const el = slides[current];
+    if (direction > 0) return el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    return el.scrollTop <= 0;
+  }
+
+  // Mouse wheel / trackpad: move one slide per gesture, then cool down so a
+  // single swipe doesn't fly through several slides at once.
+  let wheelLocked = false;
+  window.addEventListener('wheel', (e) => {
+    if (wheelLocked) return;
+    if (Math.abs(e.deltaY) < 12) return;
+    const direction = e.deltaY > 0 ? 1 : -1;
+    if (!atSlideEdge(direction)) return;
+    wheelLocked = true;
+    goTo(current + direction);
+    setTimeout(() => { wheelLocked = false; }, 500);
+  }, { passive: true });
+
+  // Touch swipe: vertical drag moves between slides, mirroring the arrow keys.
+  let touchStartY = null;
+  window.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  window.addEventListener('touchend', (e) => {
+    if (touchStartY === null) return;
+    const deltaY = touchStartY - e.changedTouches[0].clientY;
+    touchStartY = null;
+    if (Math.abs(deltaY) < 40) return;
+    const direction = deltaY > 0 ? 1 : -1;
+    if (!atSlideEdge(direction)) return;
+    goTo(current + direction);
+  }, { passive: true });
 </script>
 </body>
 </html>
