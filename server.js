@@ -83,6 +83,51 @@ app.get('/api/rodent-summary', async (req, res) => {
   }
 });
 
+// Live pull from NYC Open Data: of the rodent/rat/mice-related violations,
+// how many have been certified corrected by the owner (closed) vs. still
+// open, per borough.
+app.get('/api/rodent-closure-summary', async (req, res) => {
+  try {
+    const rows = await sodaGroupCount(
+      'boro, (certifieddate IS NOT NULL) as is_closed, count(*) as cnt',
+      `${DATE_WHERE} AND ${PEST_WHERE}`,
+      'boro, is_closed'
+    );
+
+    const byBoro = {};
+    for (const row of rows) {
+      const boro = (row.boro || '').toUpperCase();
+      if (!BORO_POPULATION[boro]) continue;
+      byBoro[boro] ||= { closed: 0, open: 0 };
+      const count = parseInt(row.cnt, 10);
+      if (row.is_closed === true) byBoro[boro].closed += count;
+      else byBoro[boro].open += count;
+    }
+
+    const summary = Object.entries(byBoro)
+      .map(([boro, { closed, open }]) => {
+        const total = closed + open;
+        return {
+          boro,
+          closed_count: closed,
+          open_count: open,
+          total,
+          closed_pct: Math.round((closed / total) * 1000) / 10,
+        };
+      })
+      .sort((a, b) => b.closed_pct - a.closed_pct);
+
+    res.json({
+      source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
+      timeframe: '2020-01-01 to present',
+      fetched_at: new Date().toISOString(),
+      data: summary,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Live pull from NYC Open Data: rodent/rat/mice-related violations per zip code
 // since 2020, so the front end can offer a "look up your zip" lookup.
 app.get('/api/rodent-by-zip', async (req, res) => {

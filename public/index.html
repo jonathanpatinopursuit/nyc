@@ -86,13 +86,12 @@
     min-height: 100vh;
     min-height: 100dvh;
     width: 100%;
-    align-items: center;
     overflow-y: auto;
   }
   .slide.active { display: flex; }
   .slide-inner {
     max-width: 720px;
-    margin: 0 auto;
+    margin: auto;
     width: 100%;
     padding: 64px 20px;
   }
@@ -204,6 +203,46 @@
     font-family: var(--sans);
     font-weight: 700;
     font-size: 14px;
+  }
+
+  .formula-card {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-size: 15px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .formula-card strong {
+    color: var(--text-primary);
+  }
+
+  /* "How I analyzed it" now also carries the formula + full table, so
+     tighten vertical rhythm to keep the whole slide in view without scrolling. */
+  .slide-analysis {
+    padding-top: 40px;
+    padding-bottom: 32px;
+  }
+  .slide-analysis .slide-eyebrow {
+    font-size: 26px;
+    margin-bottom: 20px;
+  }
+  .slide-analysis .method-steps li {
+    font-size: 17px;
+    margin-bottom: 14px;
+  }
+  .slide-analysis .formula-card {
+    margin-top: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .slide-analysis .slide-table-compact {
+    margin-top: 20px;
+    padding-top: 12px;
   }
 
   .story-list {
@@ -442,6 +481,14 @@
     letter-spacing: 0.04em;
     margin: 0 0 16px;
   }
+  .zip-title {
+    font-size: clamp(32px, 8vw, 52px);
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    margin: 0 0 24px;
+  }
 
   .chart-card {
     margin: 0;
@@ -578,15 +625,6 @@
     stroke: var(--surface-1);
     stroke-width: 2;
     stroke-linejoin: round;
-    cursor: pointer;
-  }
-  .boro-path:hover,
-  .boro-path:focus-visible {
-    filter: brightness(1.1);
-  }
-  .boro-path:focus-visible {
-    outline: 2px solid var(--text-primary);
-    outline-offset: -2px;
   }
   .boro-abbr {
     font-size: 15px;
@@ -600,32 +638,15 @@
     text-anchor: middle;
     pointer-events: none;
   }
-  .map-tooltip {
-    position: absolute;
-    pointer-events: none;
-    background: var(--text-primary);
-    color: var(--surface-1);
-    font-size: 12px;
-    line-height: 1.4;
-    padding: 8px 10px;
-    border-radius: 6px;
-    transform: translate(-50%, -100%);
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.1s ease;
-    z-index: 2;
-  }
-  .map-tooltip.visible { opacity: 1; }
-  .map-tooltip .tt-value {
-    font-weight: 700;
-    font-size: 13px;
-  }
   .map-legend {
+    position: absolute;
+    top: 10px;
+    left: 10px;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 10px;
-    margin-top: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    z-index: 2;
   }
   .map-legend-caption {
     font-family: var(--sans);
@@ -654,6 +675,23 @@
   table.data-table th {
     color: var(--text-muted);
     font-weight: 600;
+  }
+  .slide-table-compact {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gridline);
+  }
+  .slide-table-compact .section-label {
+    font-size: 11px;
+    margin: 0 0 4px;
+  }
+  table.data-table.compact {
+    font-size: 11px;
+    margin: 0;
+  }
+  table.data-table.compact th,
+  table.data-table.compact td {
+    padding: 3px 6px;
   }
 
   .status {
@@ -732,13 +770,26 @@
 </section>
 
 <section class="slide" data-slide>
-  <div class="slide-inner">
+  <div class="slide-inner slide-analysis">
     <p class="slide-eyebrow">How I analyzed it</p>
     <ol class="method-steps">
       <li>Counted every violation citing rodents, rats, or mice</li>
       <li>Grouped the violations by borough</li>
       <li>Divided by each borough's 2020 Census population to get a fair rate per 100,000 residents</li>
+      <li>The calculation:
+        <div class="formula-card">(violations &divide; population) &times; 100,000 = <strong>per&nbsp;100k</strong></div>
+      </li>
     </ol>
+    <div class="slide-table-compact">
+      <p class="section-label">Full data table</p>
+      <table class="data-table compact" id="data-table">
+        <thead>
+          <tr><th>Borough</th><th>Violations</th><th>Population</th><th>Per 100k</th></tr>
+        </thead>
+        <tbody id="data-table-body"></tbody>
+      </table>
+      <p class="status" id="status">Fetching live data from NYC Open Data&hellip;</p>
+    </div>
   </div>
 </section>
 
@@ -786,10 +837,9 @@
       <p class="chart-subtitle">By borough, violations issued Jan 2020&ndash;present</p>
       <div class="map-wrap">
         <svg id="boro-map" viewBox="0 0 600 600" role="img" aria-label="Choropleth map of New York City's five boroughs, shaded by rodent-related housing violations per 100,000 residents"></svg>
-        <div class="map-tooltip" id="map-tooltip"></div>
+        <div class="map-legend" id="map-legend"></div>
       </div>
-      <div class="map-legend" id="map-legend"></div>
-      <p class="map-legend-caption">Ranked highest to lowest, left to right. Hover or tab through a borough for exact figures.</p>
+      <p class="map-legend-caption">Ranked highest to lowest, top to bottom.</p>
     </div>
   </div>
 </section>
@@ -806,21 +856,44 @@
 </section>
 
 <section class="slide" data-slide>
-  <div class="slide-inner">
-    <p class="section-label">Full data table</p>
-    <table class="data-table" id="data-table">
-      <thead>
-        <tr><th>Borough</th><th>Violations</th><th>Population</th><th>Per 100k</th></tr>
-      </thead>
-      <tbody id="data-table-body"></tbody>
-    </table>
-    <p class="status" id="status">Fetching live data from NYC Open Data&hellip;</p>
+  <div class="slide-inner slide-analysis">
+    <p class="slide-eyebrow">Do citations get fixed?</p>
+    <ol class="method-steps">
+      <li>Took the same rodent-related citations (RODENT / RATS / MICE), 2020&ndash;present</li>
+      <li>Checked each one for a <em>certified date</em> &mdash; the point an owner formally certifies the violation was corrected</li>
+      <li>Citations with a certified date count as <strong>closed</strong>; everything else is still <strong>open</strong></li>
+      <li>The calculation:
+        <div class="formula-card">closed &divide; (closed + open) &times; 100 = <strong>closed&nbsp;%</strong></div>
+      </li>
+    </ol>
+    <div class="slide-table-compact">
+      <p class="section-label">Closed vs. open, by borough</p>
+      <table class="data-table compact" id="closure-table">
+        <thead>
+          <tr><th>Borough</th><th>Closed</th><th>Open</th><th>Closed %</th></tr>
+        </thead>
+        <tbody id="closure-table-body"></tbody>
+      </table>
+      <p class="status" id="closure-status">Fetching live data from NYC Open Data&hellip;</p>
+    </div>
   </div>
 </section>
 
 <section class="slide" data-slide>
   <div class="slide-inner">
-    <p class="section-label">Check your zip code</p>
+    <p class="slide-eyebrow">Interesting facts</p>
+    <ul class="story-list">
+      <li>The Bronx and Brooklyn have nearly the same number of rodent citations since 2020 (<strong id="fact-bx-count">&hellip;</strong> vs. <strong id="fact-bk-count">&hellip;</strong>) &mdash; but Brooklyn has almost double the population, so the Bronx's rate per resident comes out <strong id="fact-bx-multiple">&hellip;</strong> higher.</li>
+      <li>Even in the Bronx &mdash; the borough that closes out citations fastest &mdash; <strong id="fact-bx-open">&hellip;</strong> of its rodent citations are still open today.</li>
+      <li>Queens has the lowest rodent violation rate per capita of any borough, but also the lowest closure rate at just <strong id="fact-qn-closed">&hellip;</strong> closed: fewer rats, but the citations that do get written take the longest to resolve.</li>
+      <li>Zip code <strong id="fact-top-zip">&hellip;</strong> has logged more rodent citations than any other in the city &mdash; <strong id="fact-top-zip-count">&hellip;</strong> since 2020.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide" data-slide>
+  <div class="slide-inner">
+    <p class="section-label zip-title">Check your zip code ranking</p>
     <div class="zip-card">
       <form class="zip-form" id="zip-form">
         <input class="zip-input" id="zip-input" type="text" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="Enter your NYC zip code (e.g. 10456)" aria-label="NYC zip code" />
@@ -892,6 +965,18 @@
     `).join('');
   }
 
+  function renderClosureTable(rows) {
+    const body = document.getElementById('closure-table-body');
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td>${boroLabel(r.boro)}</td>
+        <td>${r.closed_count.toLocaleString()}</td>
+        <td>${r.open_count.toLocaleString()}</td>
+        <td>${r.closed_pct.toLocaleString(undefined, { maximumFractionDigits: 1 })}%</td>
+      </tr>
+    `).join('');
+  }
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const BORO_ABBR = {
     BRONX: 'BX', BROOKLYN: 'BK', MANHATTAN: 'MN', QUEENS: 'QN', 'STATEN ISLAND': 'SI',
@@ -913,39 +998,10 @@
 
   function renderMap(rows, geo) {
     const svg = document.getElementById('boro-map');
-    const tooltip = document.getElementById('map-tooltip');
-    const wrap = svg.parentElement;
     svg.setAttribute('viewBox', geo.viewBox);
     svg.innerHTML = '';
 
     const byBoro = Object.fromEntries(rows.map(r => [r.boro, r]));
-    const leadBoro = rows[0].boro;
-
-    function showTooltip(evt, row) {
-      tooltip.innerHTML = '';
-      const name = document.createElement('div');
-      name.textContent = boroLabel(row.boro);
-      const value = document.createElement('div');
-      value.className = 'tt-value';
-      value.textContent = row.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' per 100k';
-      const count = document.createElement('div');
-      count.textContent = row.pest_count.toLocaleString() + ' violations';
-      tooltip.appendChild(name);
-      tooltip.appendChild(value);
-      tooltip.appendChild(count);
-      tooltip.classList.add('visible');
-      positionTooltip(evt);
-    }
-
-    function positionTooltip(evt) {
-      const rect = wrap.getBoundingClientRect();
-      tooltip.style.left = (evt.clientX - rect.left) + 'px';
-      tooltip.style.top = (evt.clientY - rect.top - 12) + 'px';
-    }
-
-    function hideTooltip() {
-      tooltip.classList.remove('visible');
-    }
 
     Object.entries(geo.boroughs).forEach(([boro, shape]) => {
       const row = byBoro[boro];
@@ -957,37 +1013,28 @@
       path.setAttribute('d', shape.path);
       path.setAttribute('class', 'boro-path');
       path.setAttribute('fill', fillColor);
-      path.setAttribute('tabindex', '0');
       path.setAttribute('role', 'img');
       path.setAttribute('aria-label',
         `${boroLabel(boro)}: ${row.pest_per_100k.toLocaleString(undefined,{maximumFractionDigits:0})} rodent-related violations per 100,000 residents, ${row.pest_count.toLocaleString()} total`);
-
-      path.addEventListener('pointermove', (e) => showTooltip(e, row));
-      path.addEventListener('pointerenter', (e) => showTooltip(e, row));
-      path.addEventListener('pointerleave', hideTooltip);
-      path.addEventListener('focus', (e) => showTooltip(e, row));
-      path.addEventListener('blur', hideTooltip);
-
       svg.appendChild(path);
 
       const abbr = document.createElementNS(SVG_NS, 'text');
       abbr.setAttribute('x', shape.labelX);
-      abbr.setAttribute('y', boro === leadBoro ? shape.labelY - 6 : shape.labelY + 5);
+      abbr.setAttribute('y', shape.labelY - 6);
       abbr.setAttribute('class', 'boro-abbr');
       abbr.setAttribute('fill', ink);
       abbr.setAttribute('pointer-events', 'none');
       abbr.textContent = BORO_ABBR[boro] || boro;
       svg.appendChild(abbr);
 
-      if (boro === leadBoro) {
-        const val = document.createElementNS(SVG_NS, 'text');
-        val.setAttribute('x', shape.labelX);
-        val.setAttribute('y', shape.labelY + 14);
-        val.setAttribute('class', 'boro-value');
-        val.setAttribute('fill', ink);
-        val.textContent = row.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '/100k';
-        svg.appendChild(val);
-      }
+      const val = document.createElementNS(SVG_NS, 'text');
+      val.setAttribute('x', shape.labelX);
+      val.setAttribute('y', shape.labelY + 14);
+      val.setAttribute('class', 'boro-value');
+      val.setAttribute('fill', ink);
+      val.setAttribute('pointer-events', 'none');
+      val.textContent = row.pest_per_100k.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '/100k';
+      svg.appendChild(val);
     });
 
     const legend = document.getElementById('map-legend');
@@ -1014,6 +1061,37 @@
       renderChart(rows);
       renderTable(rows);
       status.textContent = 'Live from NYC Open Data · fetched ' + new Date(payload.fetched_at).toLocaleString();
+
+      const bx = rows.find(r => r.boro === 'BRONX');
+      const bk = rows.find(r => r.boro === 'BROOKLYN');
+      if (bx && bk) {
+        document.getElementById('fact-bx-count').textContent = bx.pest_count.toLocaleString();
+        document.getElementById('fact-bk-count').textContent = bk.pest_count.toLocaleString();
+        document.getElementById('fact-bx-multiple').textContent =
+          (bx.pest_per_100k / bk.pest_per_100k).toFixed(1) + 'x';
+      }
+    } catch (err) {
+      status.textContent = 'Could not load live data (' + err.message + '). Is the server running (npm start)?';
+      status.className = 'status error';
+    }
+  }
+
+  async function loadClosureData() {
+    const status = document.getElementById('closure-status');
+    try {
+      const res = await fetch('/api/rodent-closure-summary');
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      const payload = await res.json();
+      const rows = payload.data;
+      if (!rows || !rows.length) throw new Error('No data returned');
+
+      renderClosureTable(rows);
+      status.textContent = 'Live from NYC Open Data · fetched ' + new Date(payload.fetched_at).toLocaleString();
+
+      const bx = rows.find(r => r.boro === 'BRONX');
+      const qn = rows.find(r => r.boro === 'QUEENS');
+      if (bx) document.getElementById('fact-bx-open').textContent = (100 - bx.closed_pct).toFixed(1) + '%';
+      if (qn) document.getElementById('fact-qn-closed').textContent = qn.closed_pct.toFixed(1) + '%';
     } catch (err) {
       status.textContent = 'Could not load live data (' + err.message + '). Is the server running (npm start)?';
       status.className = 'status error';
@@ -1030,6 +1108,13 @@
       const payload = await res.json();
       zipTotal = payload.total_zips;
       zipByCode = Object.fromEntries(payload.data.map((r) => [r.zip, r]));
+
+      const topZip = payload.data[0];
+      if (topZip) {
+        document.getElementById('fact-top-zip').textContent = topZip.zip;
+        document.getElementById('fact-top-zip-count').textContent =
+          topZip.violation_count.toLocaleString() + ' violations';
+      }
     } catch (err) {
       zipByCode = null;
     }
@@ -1117,6 +1202,7 @@
   }
 
   load();
+  loadClosureData();
   loadZipData();
   renderBronxZipMap();
 
