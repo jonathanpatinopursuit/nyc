@@ -1,7 +1,13 @@
 {
   "functions": {
     "server.js": {
-      "maxDuration": 60
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/warm-cache",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

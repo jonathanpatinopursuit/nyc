@@ -46,12 +46,21 @@ async function sodaGroupCount(select, where, group) {
 
 // Socrata has no index on novdescription, so PEST_WHERE's `like '%RODENT%'`
 // has to text-scan the whole violations table before it can group/aggregate
-// — about 30s per query. That's slow enough to time out a page load (and did:
-// /api/rodent-by-zip hanging for 30s+ on every request was silently breaking
-// the "look up your zip" feature, since the client gives up and shows a
-// generic error). Each of the three routes below hits a distinct query shape
-// (grouped by boro, by boro+closed, by zip), so each gets its own cache entry.
-const RESPONSE_CACHE_TTL_MS = 30 * 60 * 1000;
+// — 25s to 60s+ per query, variable enough that it has actually timed out a
+// production request outright (Vercel killed it at maxDuration). That's slow
+// enough to time out a page load, and did: /api/rodent-by-zip hanging on
+// every request was silently breaking the "look up your zip" feature, since
+// the client gives up and shows a generic error. Each of the three routes
+// below hits a distinct query shape (grouped by boro, by boro+closed, by
+// zip), so each gets its own cache entry.
+//
+// TTL is long (6h) because this is slow-changing aggregate city data, not
+// something that needs minute-to-minute freshness — the goal is to make a
+// cold hit (which can occasionally exceed even a 60s function timeout) rare,
+// not to serve the freshest possible number. A daily Vercel Cron (see
+// /api/warm-cache and vercel.json) proactively refreshes it so real visitors
+// essentially never pay the cold-query cost themselves.
+const RESPONSE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const responseCache = new Map(); // key -> { data, fetchedAt }
 const responseCacheInFlight = new Map(); // key -> in-flight promise, dedupes concurrent cold requests
 
@@ -75,36 +84,88 @@ async function cachedFetch(key, fn) {
   return responseCacheInFlight.get(key);
 }
 
+// Named so /api/warm-cache (and a daily Vercel Cron) can trigger the same
+// computation the routes below use, keeping the cache warm proactively
+// instead of leaving it to whichever visitor happens to arrive after expiry.
+async function computeRodentSummary() {
+  const pestRows = await sodaGroupCount(
+    'boro, count(*) as pest_count',
+    `${DATE_WHERE} AND ${PEST_WHERE}`,
+    'boro'
+  );
+
+  return pestRows
+    .map((row) => {
+      const boro = (row.boro || '').toUpperCase();
+      const population = BORO_POPULATION[boro];
+      if (!population) return null;
+      const pestCount = parseInt(row.pest_count, 10);
+      return {
+        boro,
+        pest_count: pestCount,
+        population,
+        pest_per_100k: Math.round((pestCount / population) * 100_000 * 100) / 100,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.pest_per_100k - a.pest_per_100k);
+}
+
+async function computeClosureSummary() {
+  const rows = await sodaGroupCount(
+    'boro, (certifieddate IS NOT NULL) as is_closed, count(*) as cnt',
+    `${DATE_WHERE} AND ${PEST_WHERE}`,
+    'boro, is_closed'
+  );
+
+  const byBoro = {};
+  for (const row of rows) {
+    const boro = (row.boro || '').toUpperCase();
+    if (!BORO_POPULATION[boro]) continue;
+    byBoro[boro] ||= { closed: 0, open: 0 };
+    const count = parseInt(row.cnt, 10);
+    if (row.is_closed === true) byBoro[boro].closed += count;
+    else byBoro[boro].open += count;
+  }
+
+  return Object.entries(byBoro)
+    .map(([boro, { closed, open }]) => {
+      const total = closed + open;
+      return {
+        boro,
+        closed_count: closed,
+        open_count: open,
+        total,
+        closed_pct: Math.round((closed / total) * 1000) / 10,
+      };
+    })
+    .sort((a, b) => b.closed_pct - a.closed_pct);
+}
+
+async function computeByZip() {
+  const rows = await sodaGroupCount(
+    'zip, count(*) as violation_count',
+    `${DATE_WHERE} AND ${PEST_WHERE} AND zip IS NOT NULL`,
+    'zip'
+  );
+
+  return rows
+    .map((row) => ({
+      zip: (row.zip || '').trim(),
+      violation_count: parseInt(row.violation_count, 10),
+    }))
+    .filter((row) => /^\d{5}$/.test(row.zip))
+    .sort((a, b) => b.violation_count - a.violation_count)
+    .map((row, i) => ({ ...row, rank: i + 1 }));
+}
+
 const app = express();
 
 // Live pull from NYC Open Data (HPD Housing Maintenance Code Violations):
 // rodent/rat/mice-related violations per borough since 2020, normalized per 100k residents.
 app.get('/api/rodent-summary', async (req, res) => {
   try {
-    const { data: summary, fetchedAt } = await cachedFetch('rodent-summary', async () => {
-      const pestRows = await sodaGroupCount(
-        'boro, count(*) as pest_count',
-        `${DATE_WHERE} AND ${PEST_WHERE}`,
-        'boro'
-      );
-
-      return pestRows
-        .map((row) => {
-          const boro = (row.boro || '').toUpperCase();
-          const population = BORO_POPULATION[boro];
-          if (!population) return null;
-          const pestCount = parseInt(row.pest_count, 10);
-          return {
-            boro,
-            pest_count: pestCount,
-            population,
-            pest_per_100k: Math.round((pestCount / population) * 100_000 * 100) / 100,
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.pest_per_100k - a.pest_per_100k);
-    });
-
+    const { data: summary, fetchedAt } = await cachedFetch('rodent-summary', computeRodentSummary);
     res.json({
       source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
       timeframe: '2020-01-01 to present',
@@ -122,37 +183,7 @@ app.get('/api/rodent-summary', async (req, res) => {
 // open, per borough.
 app.get('/api/rodent-closure-summary', async (req, res) => {
   try {
-    const { data: summary, fetchedAt } = await cachedFetch('rodent-closure-summary', async () => {
-      const rows = await sodaGroupCount(
-        'boro, (certifieddate IS NOT NULL) as is_closed, count(*) as cnt',
-        `${DATE_WHERE} AND ${PEST_WHERE}`,
-        'boro, is_closed'
-      );
-
-      const byBoro = {};
-      for (const row of rows) {
-        const boro = (row.boro || '').toUpperCase();
-        if (!BORO_POPULATION[boro]) continue;
-        byBoro[boro] ||= { closed: 0, open: 0 };
-        const count = parseInt(row.cnt, 10);
-        if (row.is_closed === true) byBoro[boro].closed += count;
-        else byBoro[boro].open += count;
-      }
-
-      return Object.entries(byBoro)
-        .map(([boro, { closed, open }]) => {
-          const total = closed + open;
-          return {
-            boro,
-            closed_count: closed,
-            open_count: open,
-            total,
-            closed_pct: Math.round((closed / total) * 1000) / 10,
-          };
-        })
-        .sort((a, b) => b.closed_pct - a.closed_pct);
-    });
-
+    const { data: summary, fetchedAt } = await cachedFetch('rodent-closure-summary', computeClosureSummary);
     res.json({
       source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
       timeframe: '2020-01-01 to present',
@@ -169,23 +200,7 @@ app.get('/api/rodent-closure-summary', async (req, res) => {
 // since 2020, so the front end can offer a "look up your zip" lookup.
 app.get('/api/rodent-by-zip', async (req, res) => {
   try {
-    const { data: byZip, fetchedAt } = await cachedFetch('rodent-by-zip', async () => {
-      const rows = await sodaGroupCount(
-        'zip, count(*) as violation_count',
-        `${DATE_WHERE} AND ${PEST_WHERE} AND zip IS NOT NULL`,
-        'zip'
-      );
-
-      return rows
-        .map((row) => ({
-          zip: (row.zip || '').trim(),
-          violation_count: parseInt(row.violation_count, 10),
-        }))
-        .filter((row) => /^\d{5}$/.test(row.zip))
-        .sort((a, b) => b.violation_count - a.violation_count)
-        .map((row, i) => ({ ...row, rank: i + 1 }));
-    });
-
+    const { data: byZip, fetchedAt } = await cachedFetch('rodent-by-zip', computeByZip);
     res.json({
       source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
       timeframe: '2020-01-01 to present',
@@ -194,6 +209,21 @@ app.get('/api/rodent-by-zip', async (req, res) => {
       total_zips: byZip.length,
       data: byZip,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Hit by a daily Vercel Cron (see vercel.json) to proactively refresh all
+// three caches, so a real visitor essentially never pays the cold-query cost.
+app.get('/api/warm-cache', async (req, res) => {
+  try {
+    await Promise.all([
+      cachedFetch('rodent-summary', computeRodentSummary),
+      cachedFetch('rodent-closure-summary', computeClosureSummary),
+      cachedFetch('rodent-by-zip', computeByZip),
+    ]);
+    res.json({ status: 'ok', warmed_at: new Date().toISOString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
