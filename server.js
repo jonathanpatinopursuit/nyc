@@ -44,38 +44,72 @@ async function sodaGroupCount(select, where, group) {
   return response.json();
 }
 
+// Socrata has no index on novdescription, so PEST_WHERE's `like '%RODENT%'`
+// has to text-scan the whole violations table before it can group/aggregate
+// — about 30s per query. That's slow enough to time out a page load (and did:
+// /api/rodent-by-zip hanging for 30s+ on every request was silently breaking
+// the "look up your zip" feature, since the client gives up and shows a
+// generic error). Each of the three routes below hits a distinct query shape
+// (grouped by boro, by boro+closed, by zip), so each gets its own cache entry.
+const RESPONSE_CACHE_TTL_MS = 30 * 60 * 1000;
+const responseCache = new Map(); // key -> { data, fetchedAt }
+const responseCacheInFlight = new Map(); // key -> in-flight promise, dedupes concurrent cold requests
+
+async function cachedFetch(key, fn) {
+  const hit = responseCache.get(key);
+  if (hit && Date.now() - hit.fetchedAt < RESPONSE_CACHE_TTL_MS) {
+    return hit;
+  }
+  if (!responseCacheInFlight.has(key)) {
+    const promise = fn()
+      .then((data) => {
+        const entry = { data, fetchedAt: Date.now() };
+        responseCache.set(key, entry);
+        return entry;
+      })
+      .finally(() => {
+        responseCacheInFlight.delete(key);
+      });
+    responseCacheInFlight.set(key, promise);
+  }
+  return responseCacheInFlight.get(key);
+}
+
 const app = express();
 
 // Live pull from NYC Open Data (HPD Housing Maintenance Code Violations):
 // rodent/rat/mice-related violations per borough since 2020, normalized per 100k residents.
 app.get('/api/rodent-summary', async (req, res) => {
   try {
-    const pestRows = await sodaGroupCount(
-      'boro, count(*) as pest_count',
-      `${DATE_WHERE} AND ${PEST_WHERE}`,
-      'boro'
-    );
+    const { data: summary, fetchedAt } = await cachedFetch('rodent-summary', async () => {
+      const pestRows = await sodaGroupCount(
+        'boro, count(*) as pest_count',
+        `${DATE_WHERE} AND ${PEST_WHERE}`,
+        'boro'
+      );
 
-    const summary = pestRows
-      .map((row) => {
-        const boro = (row.boro || '').toUpperCase();
-        const population = BORO_POPULATION[boro];
-        if (!population) return null;
-        const pestCount = parseInt(row.pest_count, 10);
-        return {
-          boro,
-          pest_count: pestCount,
-          population,
-          pest_per_100k: Math.round((pestCount / population) * 100_000 * 100) / 100,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.pest_per_100k - a.pest_per_100k);
+      return pestRows
+        .map((row) => {
+          const boro = (row.boro || '').toUpperCase();
+          const population = BORO_POPULATION[boro];
+          if (!population) return null;
+          const pestCount = parseInt(row.pest_count, 10);
+          return {
+            boro,
+            pest_count: pestCount,
+            population,
+            pest_per_100k: Math.round((pestCount / population) * 100_000 * 100) / 100,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.pest_per_100k - a.pest_per_100k);
+    });
 
     res.json({
       source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
       timeframe: '2020-01-01 to present',
       fetched_at: new Date().toISOString(),
+      data_as_of: new Date(fetchedAt).toISOString(),
       data: summary,
     });
   } catch (err) {
@@ -88,39 +122,42 @@ app.get('/api/rodent-summary', async (req, res) => {
 // open, per borough.
 app.get('/api/rodent-closure-summary', async (req, res) => {
   try {
-    const rows = await sodaGroupCount(
-      'boro, (certifieddate IS NOT NULL) as is_closed, count(*) as cnt',
-      `${DATE_WHERE} AND ${PEST_WHERE}`,
-      'boro, is_closed'
-    );
+    const { data: summary, fetchedAt } = await cachedFetch('rodent-closure-summary', async () => {
+      const rows = await sodaGroupCount(
+        'boro, (certifieddate IS NOT NULL) as is_closed, count(*) as cnt',
+        `${DATE_WHERE} AND ${PEST_WHERE}`,
+        'boro, is_closed'
+      );
 
-    const byBoro = {};
-    for (const row of rows) {
-      const boro = (row.boro || '').toUpperCase();
-      if (!BORO_POPULATION[boro]) continue;
-      byBoro[boro] ||= { closed: 0, open: 0 };
-      const count = parseInt(row.cnt, 10);
-      if (row.is_closed === true) byBoro[boro].closed += count;
-      else byBoro[boro].open += count;
-    }
+      const byBoro = {};
+      for (const row of rows) {
+        const boro = (row.boro || '').toUpperCase();
+        if (!BORO_POPULATION[boro]) continue;
+        byBoro[boro] ||= { closed: 0, open: 0 };
+        const count = parseInt(row.cnt, 10);
+        if (row.is_closed === true) byBoro[boro].closed += count;
+        else byBoro[boro].open += count;
+      }
 
-    const summary = Object.entries(byBoro)
-      .map(([boro, { closed, open }]) => {
-        const total = closed + open;
-        return {
-          boro,
-          closed_count: closed,
-          open_count: open,
-          total,
-          closed_pct: Math.round((closed / total) * 1000) / 10,
-        };
-      })
-      .sort((a, b) => b.closed_pct - a.closed_pct);
+      return Object.entries(byBoro)
+        .map(([boro, { closed, open }]) => {
+          const total = closed + open;
+          return {
+            boro,
+            closed_count: closed,
+            open_count: open,
+            total,
+            closed_pct: Math.round((closed / total) * 1000) / 10,
+          };
+        })
+        .sort((a, b) => b.closed_pct - a.closed_pct);
+    });
 
     res.json({
       source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
       timeframe: '2020-01-01 to present',
       fetched_at: new Date().toISOString(),
+      data_as_of: new Date(fetchedAt).toISOString(),
       data: summary,
     });
   } catch (err) {
@@ -132,25 +169,28 @@ app.get('/api/rodent-closure-summary', async (req, res) => {
 // since 2020, so the front end can offer a "look up your zip" lookup.
 app.get('/api/rodent-by-zip', async (req, res) => {
   try {
-    const rows = await sodaGroupCount(
-      'zip, count(*) as violation_count',
-      `${DATE_WHERE} AND ${PEST_WHERE} AND zip IS NOT NULL`,
-      'zip'
-    );
+    const { data: byZip, fetchedAt } = await cachedFetch('rodent-by-zip', async () => {
+      const rows = await sodaGroupCount(
+        'zip, count(*) as violation_count',
+        `${DATE_WHERE} AND ${PEST_WHERE} AND zip IS NOT NULL`,
+        'zip'
+      );
 
-    const byZip = rows
-      .map((row) => ({
-        zip: (row.zip || '').trim(),
-        violation_count: parseInt(row.violation_count, 10),
-      }))
-      .filter((row) => /^\d{5}$/.test(row.zip))
-      .sort((a, b) => b.violation_count - a.violation_count)
-      .map((row, i) => ({ ...row, rank: i + 1 }));
+      return rows
+        .map((row) => ({
+          zip: (row.zip || '').trim(),
+          violation_count: parseInt(row.violation_count, 10),
+        }))
+        .filter((row) => /^\d{5}$/.test(row.zip))
+        .sort((a, b) => b.violation_count - a.violation_count)
+        .map((row, i) => ({ ...row, rank: i + 1 }));
+    });
 
     res.json({
       source: 'NYC Open Data — HPD Housing Maintenance Code Violations (csn4-vhvf)',
       timeframe: '2020-01-01 to present',
       fetched_at: new Date().toISOString(),
+      data_as_of: new Date(fetchedAt).toISOString(),
       total_zips: byZip.length,
       data: byZip,
     });
